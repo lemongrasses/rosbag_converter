@@ -1,0 +1,6 @@
+__pycache__/*
+bag_output/
+build/
+dist/
+pyenv/
+third_party

@@ -1,0 +1,14 @@
+PyQt6
+progressbar
+numpy
+opencv-python
+open3d
+
+--extra-index-url https://rospypi.github.io/simple/
+cv_bridge
+rospy
+rosbag
+sensor_msgs
+geometry_msgs
+nav_msgs
+roslz4
