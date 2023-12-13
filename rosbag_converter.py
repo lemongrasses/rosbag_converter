@@ -104,6 +104,7 @@ class Ui_MainWindow(object):
         out_dir = QtWidgets.QFileDialog.getExistingDirectory(None, 'Select out dir', self.pwd, options=QtWidgets.QFileDialog.Option.ShowDirsOnly)
         target_dir = 'bag_output'
         out_dir = Path('/').joinpath(out_dir, target_dir)
+        self.selected_outdir.setText(out_dir.as_posix())
         self.bag.set_outdir_path(out_dir)
         self.outdir_ready = True
             
