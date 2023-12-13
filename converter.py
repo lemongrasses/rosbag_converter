@@ -28,6 +28,7 @@ class Converter():
         pass
 
     def _CompressedImage_convert(self, msg):
+        cv_image = None
         try:
             # cv_image = self.bridge.imgmsg_to_cv2(msg.data, "bgr8")
             np_arr = np.fromstring(msg.data, np.ub)
@@ -35,7 +36,7 @@ class Converter():
         except CvBridgeError as e:
             print(e)
 
-        time =  msg.header.stamp.to_sec() / (10 ** 9)
+        time =  msg.header.stamp.to_sec()
         timestr = "%.9f" % msg.header.stamp.to_sec()
 
         image_name = timestr + ".png"
@@ -43,12 +44,13 @@ class Converter():
     
     def _Image_convert(self, msg):
         bridge = CvBridge()
+        cv_image = None
         try:
             cv_image = bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
         except CvBridgeError as e:
             print(e)
             
-        time =  msg.header.stamp.to_sec() / (10 ** 9)
+        time =  msg.header.stamp.to_sec()
         timestr = "%.9f" % msg.header.stamp.to_sec()
 
         image_name = timestr + ".png"
@@ -62,19 +64,34 @@ class Converter():
         return (time, gyro, acce, 'imu')
 
     def _Odom_convert(self, msg):
-        time =  msg.header.stamp.to_sec() / (10 ** 9)
+        time =  msg.header.stamp.to_sec()
         pose = [msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z]
         # In order, the parameters are:
         # (x, y, z, rotation about X axis, rotation about Y axis, rotation about Z axis)
         orientation = [msg.pose.pose.orientation.w, msg.pose.pose.orientation.x, msg.pose.pose.orientation.y, msg.pose.pose.orientation.z]
+        pos_cov = list(msg.pose.covariance)
         # It is only meant to represent a direction. Therefore, it does not make sense to apply a translation to it
         vel = [msg.twist.twist.linear.x, msg.twist.twist.linear.y, msg.twist.twist.linear.z]
         ang_vel = [msg.twist.twist.angular.x, msg.twist.twist.angular.y, msg.twist.twist.angular.z]
+        vel_cov = list(msg.twist.covariance)
+        return (time, pose, orientation, pos_cov, vel, ang_vel, vel_cov, 'odom')
+    
+    def _PointCloud_convert(self, msg):
+        time = msg.header.stamp.to_sec()
+        timestr = "%.9f" % msg.header.stamp.to_sec()
+        pcd_name = timestr + ".pcd"
+        points = pc2.read_points(msg, skip_nans=True, field_names=("x", "y", "z"))
+        pc_list = list()
+        for point in points:
+            pc_list.append([point[0], point[1], point[2]])
 
-        return (time, pose, orientation, vel, ang_vel, 'odom')
-
+        np.array(pc_list)
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(pc_list)
+        return (time, pcd_name, pcd, 'pcd')
+    
     def _Livox_convert(self, msg):
-        time = msg.header.stamp.to_sec() / (10 ** 9)
+        time = msg.header.stamp.to_sec()
 
         timestr = "%.9f" % msg.header.stamp.to_sec()
         pcd_name = timestr + ".pcd"
@@ -88,20 +105,6 @@ class Converter():
         pcd.points = o3d.utility.Vector3dVector(point_XYZ)
 
         return (time, pcd_name, pcd, 'livox')
-
-    def _PointCloud_convert(self, msg):
-        time = msg.header.stamp.to_sec() / (10 ** 9)
-        timestr = "%.9f" % msg.header.stamp.to_sec()
-        pcd_name = timestr + ".pcd"
-        points = pc2.read_points(msg, skip_nans=True, field_names=("x", "y", "z"))
-        pc_list = list()
-        for point in points:
-            pc_list.append([point[0], point[1], point[2]])
-
-        np.array(pc_list)
-        pcd = o3d.geometry.PointCloud()
-        pcd.points = o3d.utility.Vector3dVector(pc_list)
-        return (time, pcd_name, pcd, 'pcd')
     
     def convert(self, msg):
         data = tuple()
@@ -115,6 +118,6 @@ class Converter():
             data = self._Odom_convert(msg)
         elif 'PointCloud2' in str(type(msg)):
             data = self._PointCloud_convert(msg)
-        elif 'Livox' in str(type(msg)):
-            pass
+        elif 'livox' in str(type(msg)):
+            data = self._Livox_convert(msg)
         return data

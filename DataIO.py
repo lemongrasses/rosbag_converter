@@ -76,20 +76,20 @@ class BagDataIO():
         
     def data_output(self, data: tuple):
         if (data[-1] == 'compressedimage') or (data[-1] == 'image'):
-            cv2.imwrite(str(Path('/').joinpath(self.imagedir,data[1])), data[2])
+            t = data[1] * (10**9)
+            cv2.imwrite(str(Path('/').joinpath(self.imagedir,t)), data[2])
         elif data[-1] == 'imu':
             print(f'{data[0]}\t{data[1][0]}\t{data[1][1]}\t{data[1][2]}\t{data[2][0]}\t{data[2][1]}\t{data[2][2]}',file=self.imufile)
         elif data[-1] == 'odom':
-            pass
+            print(f'{data[0]}\t{data[1][0]}\t{data[1][1]}\t{data[1][2]}\t{data[2][0]}\t{data[2][1]}\t{data[2][2]}\t{data[2][3]}\t{data[4][0]}\t{data[4][1]}\t{data[4][2]}\t{data[5][0]}\t{data[5][1]}\t{data[5][2]}',file=self.odomfile)
         elif data[-1] == 'pcd' or data[-1] == 'livox':
-            t = o3d.io.write_point_cloud(str(Path('/').joinpath(self.pcdir,data[1])), data[2], print_progress=True)
+            t = data[1] * (10**9)
+            result = o3d.io.write_point_cloud(str(Path('/').joinpath(self.pcdir,t)), data[2], print_progress=True)
     def __del__(self) -> None:
         if self.is_open:
             self.bag.close()
 
 if __name__ == '__main__':
     bag = BagDataIO()
-    bag.open('P40-0705.bag')
-    for topic, msg, t in bag.get_msgs():
-        print(topic)
+    
     
