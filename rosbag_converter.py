@@ -64,11 +64,24 @@ class Ui_MainWindow(object):
         self.description_3.setGeometry(QtCore.QRect(50, 160, 211, 21))
         self.description_3.setObjectName("label_5")
         self.instruction = QtWidgets.QLabel(parent=self.centralwidget)
-        self.instruction.setGeometry(QtCore.QRect(500, 210, 241, 241))
+        self.instruction.setGeometry(QtCore.QRect(470, 280, 301, 211))
         self.instruction.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeading|QtCore.Qt.AlignmentFlag.AlignLeft|QtCore.Qt.AlignmentFlag.AlignTop)
         self.instruction.setWordWrap(True)
         self.instruction.setTextInteractionFlags(QtCore.Qt.TextInteractionFlag.NoTextInteraction)
         self.instruction.setObjectName("label_6")
+        self.timedescrip = QtWidgets.QLabel(parent=self.centralwidget)
+        self.timedescrip.setGeometry(QtCore.QRect(470, 200, 51,41))
+        self.timedescrip.setTextInteractionFlags(QtCore.Qt.TextInteractionFlag.NoTextInteraction)
+        self.timedescrip.setObjectName("label_7")
+        self.gnssckb = QtWidgets.QCheckBox(parent=self.centralwidget)
+        self.gnssckb.setGeometry(QtCore.QRect(540, 210, 80, 19))
+        self.gnssckb.setText("GPST")
+        self.gnssckb.clicked.connect(self.setTimeConvert)
+        self.unixckb = QtWidgets.QCheckBox(parent=self.centralwidget)
+        self.unixckb.setGeometry(QtCore.QRect(630, 210, 80, 19))
+        self.unixckb.setText("UnixT")
+        self.unixckb.clicked.connect(self.setTimeConvert)
+
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(parent=MainWindow)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 800, 25))
@@ -90,6 +103,7 @@ class Ui_MainWindow(object):
         self.select_output.setText(_translate("MainWindow", "Select out dir"))
         self.description_3.setText(_translate("MainWindow", "Available Topics in selected bag file"))
         self.instruction.setText(_translate("MainWindow", "<html><head/><body><p><span style=\" font-size:11pt;\">1. Selected the target bag file.<br/></span></p><p><span style=\" font-size:11pt;\">2. Selected the convert result output root dir<br/></span></p><p><span style=\" font-size:11pt;\">3. Selected the topics which wolud convert.<br/></span></p><p><span style=\" font-size:11pt;\">4. Press OK</span></p></body></html>"))
+        self.timedescrip.setText(_translate("MainWindow", "<html>Time<br>convert</html>"))
 
     def _showOpenDialog(self):
         bag_path = QtWidgets.QFileDialog.getOpenFileName(None, 'select bag file', self.pwd, '*.bag')
@@ -130,10 +144,24 @@ class Ui_MainWindow(object):
             if checkbox.text() in self.target_topic:
                 self.target_topic.remove(checkbox.text())
 
+    def setTimeConvert(self):
+        if self.gnssckb.isChecked() and not self.unixckb.isChecked():
+            self.bag.timeconvert = 1
+        elif not self.gnssckb.isChecked() and self.unixckb.isChecked():
+            self.bag.timeconvert = 2
+        elif self.gnssckb.isChecked() and self.unixckb.isChecked():
+            return False
+        else:
+            self.bag.timeconvert = 0
+        return True
+
     def _onAccepted(self):
         self._check_target_topic()
         print(self.target_topic)
         if not self._check_output():
+            return None
+        if not self.setTimeConvert():
+            QtWidgets.QMessageBox.warning(None, "multi timeconvet", "Please select the correct time base(Should be only one)")
             return None
         self.progressdialog = QtWidgets.QProgressDialog('Processing', 'Cancel', 0, self.bag.t_end - self.bag.t_start, None)
         self.progressdialog.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
@@ -167,6 +195,8 @@ class Ui_MainWindow(object):
                 data = self.converter.convert(msg)
                 self.bag.data_output(data)
             self.progressdialog.setValue(t.to_sec() -self.bag.t_start)
+
+        self.bag.close_file()
 
 if __name__ == "__main__":
     import sys

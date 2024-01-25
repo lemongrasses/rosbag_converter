@@ -2,11 +2,26 @@ import open3d as o3d
 import rosbag
 import cv2
 from pathlib import Path
+from datetime import datetime
 
+# Calculate the second of week from unix time
+def unix2sow(sec, nsec):
+    dt = datetime.fromtimestamp(sec)
+    weekday = datetime.weekday(dt)
+    weekday = (weekday+1) % 7
+    sow = weekday * 86400 + (dt.hour-8) * 3600 + dt.minute * 60 + dt.second + (nsec) + 18
+    return sow
+
+def gpst2sow(sec):
+    week = int(sec / 604800)
+    seconds = sec % 604800
+    sow = seconds
+    return sow
 
 class BagDataIO():
     def __init__(self) -> None:
         self.is_open = False
+        self.timeconvert = 0
         pass
 
     def open(self, path) -> None:
@@ -53,7 +68,7 @@ class BagDataIO():
             elif 'Odometry' in types:
                 print('Odometry output file setting')
                 self.odomfile = open(Path('/').joinpath(self.out_dir, 'Odom.txt'), 'w+')
-                print(f'time(s)\tpose_x\tpose_y\tpose_z\tquat_w\tquat_x\tquat_y\tquat_z\tvel_x\tvel_y\tvel_z\tang_vel_x\tang_vel_y\tang_vel_z',file=self.odomfile)
+                print(f'time(s)\tpose_x\tpose_y\tpose_z\tquat_w\tquat_x\tquat_y\tquat_z\tcovp_x\tcovp_y\tcovp_z\tvel_x\tvel_y\tvel_z\tang_vel_x\tang_vel_y\tang_vel_z\tcovv_x\tcovv_y\tcovv_z',file=self.odomfile)
             elif 'CompressedImage' in types:
                 print('Compressed Image output dir setting')
                 self.compressedimagedir = Path('/').joinpath(self.out_dir, 'Image')
@@ -75,16 +90,35 @@ class BagDataIO():
             return target_topics
         
     def data_output(self, data: tuple):
+        data = self.TimeConvert(data)
         if (data[-1] == 'compressedimage') or (data[-1] == 'image'):
-            t = data[1] * (10**9)
-            cv2.imwrite(str(Path('/').joinpath(self.imagedir,t)), data[2])
+            cv2.imwrite(str(Path('/').joinpath(self.imagedir,data[1])), data[2])
         elif data[-1] == 'imu':
             print(f'{data[0]}\t{data[1][0]}\t{data[1][1]}\t{data[1][2]}\t{data[2][0]}\t{data[2][1]}\t{data[2][2]}',file=self.imufile)
         elif data[-1] == 'odom':
-            print(f'{data[0]}\t{data[1][0]}\t{data[1][1]}\t{data[1][2]}\t{data[2][0]}\t{data[2][1]}\t{data[2][2]}\t{data[2][3]}\t{data[4][0]}\t{data[4][1]}\t{data[4][2]}\t{data[5][0]}\t{data[5][1]}\t{data[5][2]}',file=self.odomfile)
+            print(f'{data[0]}\t{data[1][0]}\t{data[1][1]}\t{data[1][2]}\t{data[2][0]}\t{data[2][1]}\t{data[2][2]}\t{data[2][3]}\t{data[3][0]}\t{data[3][4]}\t{data[3][8]}\t{data[4][0]}\t{data[4][1]}\t{data[4][2]}\t{data[5][0]}\t{data[5][1]}\t{data[5][2]}\t{data[6][0]}\t{data[6][4]}\t{data[6][8]}',file=self.odomfile)
         elif data[-1] == 'pcd' or data[-1] == 'livox':
-            t = data[1] * (10**9)
-            result = o3d.io.write_point_cloud(str(Path('/').joinpath(self.pcdir,t)), data[2], print_progress=True)
+            result = o3d.io.write_point_cloud(str(Path('/').joinpath(self.pcdir,data[1])), data[2], print_progress=True)
+
+    def TimeConvert(self, data):
+        t = data[0]
+        if self.timeconvert == 1:
+            data[0] = gpst2sow(t)
+        elif self.timeconvert == 2:
+            sec = int(t)
+            nsec = t - sec
+            data[0] = unix2sow(sec, nsec)
+
+        return data
+
+    def close_file(self):
+        if hasattr(self, "imufile"):
+            if not self.imufile.closed:
+                self.imufile.close()
+        if hasattr(self, "odomfile"):
+            if not self.odomfile.closed:
+                self.odomfile.close()
+
     def __del__(self) -> None:
         if self.is_open:
             self.bag.close()

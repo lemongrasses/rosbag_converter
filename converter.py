@@ -9,19 +9,7 @@ from cv_bridge import CvBridge
 from cv_bridge import CvBridgeError
 from datetime import datetime
 
-# Calculate the second of week from unix time
-def unix2sow(sec, nsec):
-    dt = datetime.fromtimestamp(sec)
-    weekday = datetime.weekday(dt)
-    weekday = (weekday+1) % 7
-    sow = weekday * 86400 + (dt.hour-8) * 3600 + dt.minute * 60 + dt.second + (nsec) + 18
-    return sow
 
-def gpst2sow(sec, nsec):
-    week = int(sec / 604800)
-    seconds = sec * 604800
-    sow = seconds + nsec
-    return sow
 
 class Converter():
     def __init__(self) -> None:
@@ -37,10 +25,10 @@ class Converter():
             print(e)
 
         time =  msg.header.stamp.to_sec()
-        timestr = "%.9f" % msg.header.stamp.to_sec()
+        timestr = str( (msg.header.stamp.to_sec() * (10**9) ) )
 
         image_name = timestr + ".png"
-        return (time, image_name, cv_image, 'compressedimage')
+        return [time, image_name, cv_image, 'compressedimage']
     
     def _Image_convert(self, msg):
         bridge = CvBridge()
@@ -51,17 +39,17 @@ class Converter():
             print(e)
             
         time =  msg.header.stamp.to_sec()
-        timestr = "%.9f" % msg.header.stamp.to_sec()
+        timestr = str( (msg.header.stamp.to_sec() * (10**9) ) )
 
         image_name = timestr + ".png"
-        return (time, image_name, cv_image, 'image')
+        return [time, image_name, cv_image, 'image']
     
     def _Imu_convert(self, msg):
         time =  msg.header.stamp.to_sec()
         gyro = [msg.angular_velocity.x, msg.angular_velocity.y, msg.angular_velocity.z]
         acce = [msg.linear_acceleration.x,  msg.linear_acceleration.y,  msg.linear_acceleration.z]
         
-        return (time, gyro, acce, 'imu')
+        return [time, gyro, acce, 'imu']
 
     def _Odom_convert(self, msg):
         time =  msg.header.stamp.to_sec()
@@ -74,7 +62,7 @@ class Converter():
         vel = [msg.twist.twist.linear.x, msg.twist.twist.linear.y, msg.twist.twist.linear.z]
         ang_vel = [msg.twist.twist.angular.x, msg.twist.twist.angular.y, msg.twist.twist.angular.z]
         vel_cov = list(msg.twist.covariance)
-        return (time, pose, orientation, pos_cov, vel, ang_vel, vel_cov, 'odom')
+        return [time, pose, orientation, pos_cov, vel, ang_vel, vel_cov, 'odom']
     
     def _PointCloud_convert(self, msg):
         time = msg.header.stamp.to_sec()
@@ -88,7 +76,7 @@ class Converter():
         np.array(pc_list)
         pcd = o3d.geometry.PointCloud()
         pcd.points = o3d.utility.Vector3dVector(pc_list)
-        return (time, pcd_name, pcd, 'pcd')
+        return [time, pcd_name, pcd, 'pcd']
     
     def _Livox_convert(self, msg):
         time = msg.header.stamp.to_sec()
@@ -104,7 +92,7 @@ class Converter():
         pcd = o3d.geometry.PointCloud()
         pcd.points = o3d.utility.Vector3dVector(point_XYZ)
 
-        return (time, pcd_name, pcd, 'livox')
+        return [time, pcd_name, pcd, 'livox']
     
     def convert(self, msg):
         data = tuple()
