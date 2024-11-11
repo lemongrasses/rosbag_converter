@@ -191,6 +191,9 @@ class Ui_MainWindow(object):
 
     def _processed_msgs(self):
         for topic, msg, t in self.bag.get_msgs(self.target_topic):
+            if self.progressdialog.wasCanceled():
+                QtWidgets.QMessageBox.information(None, 'Canceled', 'Processing has been canceled.')
+                break  # Exit the loop if the user clicks "Cancel"
             if topic in self.target_topic:
                 data = self.converter.convert(msg)
                 self.bag.data_output(data)

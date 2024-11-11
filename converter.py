@@ -25,7 +25,7 @@ class Converter():
             print(e)
 
         time =  msg.header.stamp.to_sec()
-        timestr = str( (msg.header.stamp.to_sec() * (10**9) ) )
+        timestr = "%.9f" % msg.header.stamp.to_sec()
 
         image_name = timestr + ".png"
         return [time, image_name, cv_image, 'compressedimage']
@@ -39,7 +39,7 @@ class Converter():
             print(e)
             
         time =  msg.header.stamp.to_sec()
-        timestr = str( (msg.header.stamp.to_sec() * (10**9) ) )
+        timestr = "%.9f" % msg.header.stamp.to_sec()
 
         image_name = timestr + ".png"
         return [time, image_name, cv_image, 'image']

@@ -92,7 +92,8 @@ class BagDataIO():
     def data_output(self, data: tuple):
         data = self.TimeConvert(data)
         if (data[-1] == 'compressedimage') or (data[-1] == 'image'):
-            cv2.imwrite(str(Path('/').joinpath(self.imagedir,data[1])), data[2])
+            image_name = str(data[0]) +  ".png"
+            cv2.imwrite(str(Path('/').joinpath(self.imagedir,image_name)), data[2])
         elif data[-1] == 'imu':
             print(f'{data[0]}\t{data[1][0]}\t{data[1][1]}\t{data[1][2]}\t{data[2][0]}\t{data[2][1]}\t{data[2][2]}',file=self.imufile)
         elif data[-1] == 'odom':
