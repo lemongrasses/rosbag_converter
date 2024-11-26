@@ -8,7 +8,7 @@ import sensor_msgs.point_cloud2 as pc2
 from cv_bridge import CvBridge
 from cv_bridge import CvBridgeError
 from datetime import datetime
-
+from pypcd4 import PointCloud
 
 
 class Converter():
@@ -27,8 +27,8 @@ class Converter():
         time =  msg.header.stamp.to_sec()
         timestr = "%.9f" % msg.header.stamp.to_sec()
 
-        image_name = timestr + ".png"
-        return [time, image_name, cv_image, 'compressedimage']
+        ntime = msg.header.stamp.to_nsec()
+        return [time, ntime, cv_image, 'compressedimage']
     
     def _Image_convert(self, msg):
         bridge = CvBridge()
@@ -41,15 +41,17 @@ class Converter():
         time =  msg.header.stamp.to_sec()
         timestr = "%.9f" % msg.header.stamp.to_sec()
 
-        image_name = timestr + ".png"
-        return [time, image_name, cv_image, 'image']
+        ntime = msg.header.stamp.to_nsec()
+        return [time, ntime, cv_image, 'image']
     
     def _Imu_convert(self, msg):
         time =  msg.header.stamp.to_sec()
+        ntime = msg.header.stamp.to_nsec()
         gyro = [msg.angular_velocity.x, msg.angular_velocity.y, msg.angular_velocity.z]
         acce = [msg.linear_acceleration.x,  msg.linear_acceleration.y,  msg.linear_acceleration.z]
         
-        return [time, gyro, acce, 'imu']
+        
+        return [time, ntime, gyro, acce, 'imu']
 
     def _Odom_convert(self, msg):
         time =  msg.header.stamp.to_sec()
@@ -65,18 +67,10 @@ class Converter():
         return [time, pose, orientation, pos_cov, vel, ang_vel, vel_cov, 'odom']
     
     def _PointCloud_convert(self, msg):
-        time = msg.header.stamp.to_sec()
-        timestr = "%.9f" % msg.header.stamp.to_sec()
-        pcd_name = timestr + ".pcd"
-        points = pc2.read_points(msg, skip_nans=True, field_names=("x", "y", "z"))
-        pc_list = list()
-        for point in points:
-            pc_list.append([point[0], point[1], point[2]])
-
-        np.array(pc_list)
-        pcd = o3d.geometry.PointCloud()
-        pcd.points = o3d.utility.Vector3dVector(pc_list)
-        return [time, pcd_name, pcd, 'pcd']
+        ntime = msg.header.stamp.to_nsec()
+        pcd_name = str(ntime) + ".pcd"
+        pcd = PointCloud.from_msg(msg)
+        return [ntime, pcd_name, pcd, 'pcd']
     
     def _Livox_convert(self, msg):
         time = msg.header.stamp.to_sec()
@@ -95,7 +89,7 @@ class Converter():
         return [time, pcd_name, pcd, 'livox']
     
     def convert(self, msg):
-        data = tuple()
+        data = list()
         if 'CompressedImage' in str(type(msg)):
             data = self._CompressedImage_convert(msg)
         elif 'Image' in str(type(msg)):

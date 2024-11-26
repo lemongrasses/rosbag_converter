@@ -74,11 +74,16 @@ class BagDataIO():
                 self.compressedimagedir = Path('/').joinpath(self.out_dir, 'Image')
                 if not Path(self.compressedimagedir).exists():
                     Path.mkdir(self.compressedimagedir)
+                print('Image Times output file setiing')
+                self.timesfile = open(Path('/').joinpath(self.out_dir, 'times.txt'), 'w+')
             elif 'Image' in types:
                 print('Image output dir setting')
                 self.imagedir = Path('/').joinpath(self.out_dir, 'Image')
                 if not Path(self.imagedir).exists():
-                    Path.mkdir(self.imagedir)
+                    Path.mkdir(self.imagedir)    
+                print('Image Times output file setiing')
+                self.timesfile = open(Path('/').joinpath(self.out_dir, 'times.txt'), 'w+')
+            
             elif 'PointCloud2' in types:
                 print('PC out dir setting')
                 self.pcdir = Path('/').joinpath(self.out_dir, 'Pointcloud')
@@ -89,16 +94,21 @@ class BagDataIO():
                 target_topics.remove(topic)
             return target_topics
         
-    def data_output(self, data: tuple):
+    def data_output(self, data: list):
         data = self.TimeConvert(data)
         if (data[-1] == 'compressedimage') or (data[-1] == 'image'):
-            image_name = str(data[0]) +  ".png"
+            timestamp_ns = data[1]
+            timestamp_s = data[0]
+            image_name =  str(timestamp_ns) +  ".png"
             cv2.imwrite(str(Path('/').joinpath(self.imagedir,image_name)), data[2])
+            print(f'{timestamp_ns}\t{timestamp_s}',file=self.timesfile)
         elif data[-1] == 'imu':
-            print(f'{data[0]}\t{data[1][0]}\t{data[1][1]}\t{data[1][2]}\t{data[2][0]}\t{data[2][1]}\t{data[2][2]}',file=self.imufile)
+            print(f'{data[1]}\t{data[2][0]}\t{data[2][1]}\t{data[2][2]}\t{data[3][0]}\t{data[3][1]}\t{data[3][2]}',file=self.imufile)
         elif data[-1] == 'odom':
             print(f'{data[0]}\t{data[1][0]}\t{data[1][1]}\t{data[1][2]}\t{data[2][0]}\t{data[2][1]}\t{data[2][2]}\t{data[2][3]}\t{data[3][0]}\t{data[3][4]}\t{data[3][8]}\t{data[4][0]}\t{data[4][1]}\t{data[4][2]}\t{data[5][0]}\t{data[5][1]}\t{data[5][2]}\t{data[6][0]}\t{data[6][4]}\t{data[6][8]}',file=self.odomfile)
-        elif data[-1] == 'pcd' or data[-1] == 'livox':
+        elif data[-1] == 'pcd':
+            data[2].save(str(Path('/').joinpath(self.pcdir,data[1])))
+        elif data[-1] == 'livox':
             result = o3d.io.write_point_cloud(str(Path('/').joinpath(self.pcdir,data[1])), data[2], print_progress=True)
 
     def TimeConvert(self, data):
