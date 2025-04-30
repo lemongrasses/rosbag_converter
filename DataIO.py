@@ -89,6 +89,15 @@ class BagDataIO():
                 self.pcdir = Path('/').joinpath(self.out_dir, 'Pointcloud')
                 if not Path(self.pcdir).exists():
                     Path.mkdir(self.pcdir)
+            
+            elif 'NavSatFix' in types:
+                print('NavSatFix output file setting')
+                self.navsatfile = open(Path('/').joinpath(self.out_dir, 'NavSatFix.txt'), 'w+')
+                print(f'time(s)\tlatitude\tlongitude\taltitude\tcovp_x\tcovp_y\tcovp_z',file=self.navsatfile)
+            elif 'TwistWithCovarianceStamped' in types:
+                print('TwistWithCovarianceStamped output file setting')
+                self.twistfile = open(Path('/').joinpath(self.out_dir, 'TwistWithCovarianceStamped.txt'), 'w+')
+                print(f'time(s)\tvel_x\tvel_y\tvel_z\tcovv_x\tcovv_y\tcovv_z',file=self.twistfile)
             else:
                 print(f'does not support this type, please report in issue\nthe target type: {types}\n')
                 target_topics.remove(topic)
@@ -103,13 +112,18 @@ class BagDataIO():
             cv2.imwrite(str(Path('/').joinpath(self.imagedir,image_name)), data[2])
             print(f'{timestamp_ns}\t{timestamp_s}',file=self.timesfile)
         elif data[-1] == 'imu':
-            print(f'{data[1]}\t{data[2][0]}\t{data[2][1]}\t{data[2][2]}\t{data[3][0]}\t{data[3][1]}\t{data[3][2]}',file=self.imufile)
+            print(f'{data[0]}\t{data[2][0]}\t{data[2][1]}\t{data[2][2]}\t{data[3][0]}\t{data[3][1]}\t{data[3][2]}',file=self.imufile)
         elif data[-1] == 'odom':
             print(f'{data[0]}\t{data[1][0]}\t{data[1][1]}\t{data[1][2]}\t{data[2][0]}\t{data[2][1]}\t{data[2][2]}\t{data[2][3]}\t{data[3][0]}\t{data[3][4]}\t{data[3][8]}\t{data[4][0]}\t{data[4][1]}\t{data[4][2]}\t{data[5][0]}\t{data[5][1]}\t{data[5][2]}\t{data[6][0]}\t{data[6][4]}\t{data[6][8]}',file=self.odomfile)
         elif data[-1] == 'pcd':
             data[2].save(str(Path('/').joinpath(self.pcdir,data[1])))
         elif data[-1] == 'livox':
             result = o3d.io.write_point_cloud(str(Path('/').joinpath(self.pcdir,data[1])), data[2], print_progress=True)
+        elif data[-1] == 'navsatfix':
+            print(f'{data[0]}\t{data[1]}\t{data[2]}\t{data[3]}\t{data[4][0]}\t{data[4][1]}\t{data[4][2]}',file=self.navsatfile)
+        elif data[-1] == 'twistwithcovariance':
+            print(f'{data[0]}\t{data[1][0]}\t{data[1][1]}\t{data[1][2]}\t{data[2][0]}\t{data[2][7]}\t{data[2][14]}',file=self.twistfile)
+
 
     def TimeConvert(self, data):
         t = data[0]

@@ -88,6 +88,20 @@ class Converter():
 
         return [time, pcd_name, pcd, 'livox']
     
+    def _NavSatFix_convert(self, msg):
+        time = msg.header.stamp.to_sec()
+        latitude = msg.latitude
+        longitude = msg.longitude
+        altitude = msg.altitude
+        covp = [msg.position_covariance[0], msg.position_covariance[4], msg.position_covariance[8]]
+        return [time, latitude, longitude, altitude, covp, 'navsatfix']
+    
+    def _TwistWithCovarianceStamped_convert(self, msg):
+        time = msg.header.stamp.to_sec()
+        vel = [msg.twist.twist.linear.x, msg.twist.twist.linear.y, msg.twist.twist.linear.z]
+        cov = list(msg.twist.covariance)
+        return [time, vel, cov, 'twistwithcovariance']
+
     def convert(self, msg):
         data = list()
         if 'CompressedImage' in str(type(msg)):
@@ -102,4 +116,8 @@ class Converter():
             data = self._PointCloud_convert(msg)
         elif 'livox' in str(type(msg)):
             data = self._Livox_convert(msg)
+        elif 'NavSatFix' in str(type(msg)):
+            data = self._NavSatFix_convert(msg)
+        elif 'TwistWithCovarianceStamped' in str(type(msg)):
+            data = self._TwistWithCovarianceStamped_convert(msg)
         return data
