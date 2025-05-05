@@ -16,190 +16,417 @@ class Ui_MainWindow(object):
         self.converter = Converter()
         self.bag = BagDataIO()
         self.pwd = str(Path.cwd())
+        self.outdir_ready = False
+        self.target_topic = []
 
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(800, 600)
+        MainWindow.resize(800, 650)
+        MainWindow.setWindowTitle("RosBag Converter")
+        
+        # Set application style for a modern look
+        self.style = """
+        QMainWindow {
+            background-color: #f5f5f7;
+        }
+        QLabel {
+            color: #333333;
+        }
+        QPushButton {
+            background-color: #007aff;
+            color: white;
+            border-radius: 4px;
+            padding: 5px 10px;
+            font-weight: bold;
+        }
+        QPushButton:hover {
+            background-color: #0069d9;
+        }
+        QCheckBox {
+            spacing: 5px;
+        }
+        QProgressBar {
+            border: 1px solid #cccccc;
+            border-radius: 5px;
+            text-align: center;
+            background-color: #f0f0f0;
+        }
+        QProgressBar::chunk {
+            background-color: #4cd964;
+            border-radius: 5px;
+        }
+        """
+        MainWindow.setStyleSheet(self.style)
+
+        # Central widget and main layout
         self.centralwidget = QtWidgets.QWidget(parent=MainWindow)
-        self.centralwidget.setObjectName("centralwidget")
-        self.verticalLayoutWidget = QtWidgets.QWidget(parent=self.centralwidget)
-        self.verticalLayoutWidget.setGeometry(QtCore.QRect(50, 190, 401, 341))
-        self.verticalLayoutWidget.setObjectName("verticalLayoutWidget")
-        self.verticalLayout = QtWidgets.QVBoxLayout(self.verticalLayoutWidget)
-        self.verticalLayout.setContentsMargins(0, 0, 0, 0)
-        self.verticalLayout.setObjectName("verticalLayout")
-        self.buttonBox = QtWidgets.QDialogButtonBox(parent=self.centralwidget)
-        self.buttonBox.setGeometry(QtCore.QRect(550, 500, 193, 28))
-        self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.StandardButton.Cancel|QtWidgets.QDialogButtonBox.StandardButton.Ok)
-        self.buttonBox.setObjectName("buttonBox")
-        self.buttonBox.accepted.connect(self._onAccepted)
-        self.buttonBox.rejected.connect(QtCore.QCoreApplication.instance().quit)
-        self.description_1 = QtWidgets.QLabel(parent=self.centralwidget)
-        self.description_1.setGeometry(QtCore.QRect(50, 10, 141, 21))
-        self.description_1.setTextInteractionFlags(QtCore.Qt.TextInteractionFlag.NoTextInteraction)
-        self.description_1.setObjectName("label_3")
-        self.selected_bag = QtWidgets.QLabel(parent=self.centralwidget)
-        self.selected_bag.setGeometry(QtCore.QRect(50, 30, 561, 31))
+        self.mainLayout = QtWidgets.QVBoxLayout(self.centralwidget)
+        self.mainLayout.setContentsMargins(20, 20, 20, 20)
+        self.mainLayout.setSpacing(15)
+
+        # Input file section
+        self.inputGroup = QtWidgets.QGroupBox("Input ROS Bag File")
+        self.inputLayout = QtWidgets.QHBoxLayout(self.inputGroup)
+        
+        self.selected_bag = QtWidgets.QLabel("")
         self.selected_bag.setFrameShape(QtWidgets.QFrame.Shape.Box)
         self.selected_bag.setFrameShadow(QtWidgets.QFrame.Shadow.Plain)
-        self.selected_bag.setObjectName("label")
-        self.select_bag = QtWidgets.QPushButton(parent=self.centralwidget)
-        self.select_bag.setGeometry(QtCore.QRect(650, 30, 93, 28))
-        self.select_bag.setObjectName("pushButton")
+        self.selected_bag.setMinimumHeight(30)
+        
+        self.select_bag = QtWidgets.QPushButton("Select Bag File")
+        self.select_bag.setFixedWidth(120)
         self.select_bag.clicked.connect(self._showOpenDialog)
-        self.description_2 = QtWidgets.QLabel(parent=self.centralwidget)
-        self.description_2.setGeometry(QtCore.QRect(50, 80, 201, 21))
-        self.description_2.setTextInteractionFlags(QtCore.Qt.TextInteractionFlag.NoTextInteraction)
-        self.description_2.setObjectName("label_4")
-        self.selected_outdir = QtWidgets.QLabel(parent=self.centralwidget)
-        self.selected_outdir.setGeometry(QtCore.QRect(50, 110, 561, 31))
+        
+        self.inputLayout.addWidget(self.selected_bag)
+        self.inputLayout.addWidget(self.select_bag)
+        
+        # Output directory section
+        self.outputGroup = QtWidgets.QGroupBox("Output Directory")
+        self.outputLayout = QtWidgets.QHBoxLayout(self.outputGroup)
+        
+        self.selected_outdir = QtWidgets.QLabel("")
         self.selected_outdir.setFrameShape(QtWidgets.QFrame.Shape.Box)
-        self.selected_outdir.setText("")
-        self.selected_outdir.setObjectName("label_2")
-        self.select_output = QtWidgets.QPushButton(parent=self.centralwidget)
-        self.select_output.setGeometry(QtCore.QRect(650, 110, 93, 28))
-        self.select_output.setObjectName("select_output")
+        self.selected_outdir.setFrameShadow(QtWidgets.QFrame.Shadow.Plain)
+        self.selected_outdir.setMinimumHeight(30)
+        
+        self.select_output = QtWidgets.QPushButton("Select Directory")
+        self.select_output.setFixedWidth(120)
         self.select_output.clicked.connect(self._showOutputDialog)
-        self.description_3 = QtWidgets.QLabel(parent=self.centralwidget)
-        self.description_3.setGeometry(QtCore.QRect(50, 160, 211, 21))
-        self.description_3.setObjectName("label_5")
-        self.instruction = QtWidgets.QLabel(parent=self.centralwidget)
-        self.instruction.setGeometry(QtCore.QRect(470, 280, 301, 211))
-        self.instruction.setAlignment(QtCore.Qt.AlignmentFlag.AlignLeading|QtCore.Qt.AlignmentFlag.AlignLeft|QtCore.Qt.AlignmentFlag.AlignTop)
+        
+        self.outputLayout.addWidget(self.selected_outdir)
+        self.outputLayout.addWidget(self.select_output)
+        
+        # Time conversion options
+        self.timeGroup = QtWidgets.QGroupBox("Time Conversion Options")
+        self.timeLayout = QtWidgets.QHBoxLayout(self.timeGroup)
+        
+        self.gnssckb = QtWidgets.QCheckBox("GPST2SoW")
+        self.gnssckb.clicked.connect(self._handleGnssCheckbox)
+        
+        self.unixckb = QtWidgets.QCheckBox("UnixT2SoW")
+        self.unixckb.clicked.connect(self._handleUnixCheckbox)
+        
+        self.timeLayout.addWidget(self.gnssckb)
+        self.timeLayout.addWidget(self.unixckb)
+        self.timeLayout.addStretch()
+        
+        # Topics section - split into two columns
+        self.contentLayout = QtWidgets.QHBoxLayout()
+        
+        # Left side: Topics
+        self.topicsGroup = QtWidgets.QGroupBox("Available Topics")
+        self.topicsLayout = QtWidgets.QVBoxLayout(self.topicsGroup)
+        
+        self.topicsScrollArea = QtWidgets.QScrollArea()
+        self.topicsScrollArea.setWidgetResizable(True)
+        self.topicsScrollArea.setMinimumHeight(300)
+        
+        self.topicsContainer = QtWidgets.QWidget()
+        self.verticalLayout = QtWidgets.QVBoxLayout(self.topicsContainer)
+        self.verticalLayout.setContentsMargins(5, 5, 5, 5)
+        self.verticalLayout.setSpacing(2)
+        self.verticalLayout.addStretch()
+        
+        self.topicsScrollArea.setWidget(self.topicsContainer)
+        self.topicsLayout.addWidget(self.topicsScrollArea)
+        
+        # Topic selection buttons
+        self.topicButtonsLayout = QtWidgets.QHBoxLayout()
+        
+        self.selectAllButton = QtWidgets.QPushButton("Select All")
+        self.selectAllButton.clicked.connect(self._selectAllTopics)
+        
+        self.deselectAllButton = QtWidgets.QPushButton("Deselect All")
+        self.deselectAllButton.clicked.connect(self._deselectAllTopics)
+        
+        self.topicButtonsLayout.addWidget(self.selectAllButton)
+        self.topicButtonsLayout.addWidget(self.deselectAllButton)
+        self.topicsLayout.addLayout(self.topicButtonsLayout)
+        
+        # Right side: Instructions
+        self.instructionsGroup = QtWidgets.QGroupBox("Instructions")
+        self.instructionsLayout = QtWidgets.QVBoxLayout(self.instructionsGroup)
+        
+        self.instruction = QtWidgets.QLabel()
         self.instruction.setWordWrap(True)
-        self.instruction.setTextInteractionFlags(QtCore.Qt.TextInteractionFlag.NoTextInteraction)
-        self.instruction.setObjectName("label_6")
-        self.timedescrip = QtWidgets.QLabel(parent=self.centralwidget)
-        self.timedescrip.setGeometry(QtCore.QRect(470, 200, 51,41))
-        self.timedescrip.setTextInteractionFlags(QtCore.Qt.TextInteractionFlag.NoTextInteraction)
-        self.timedescrip.setObjectName("label_7")
-        self.gnssckb = QtWidgets.QCheckBox(parent=self.centralwidget)
-        self.gnssckb.setGeometry(QtCore.QRect(540, 210, 100, 19))
-        self.gnssckb.setText("GPST2SoW")
-        self.gnssckb.clicked.connect(self.setTimeConvert)
-        self.unixckb = QtWidgets.QCheckBox(parent=self.centralwidget)
-        self.unixckb.setGeometry(QtCore.QRect(650, 210, 100, 19))
-        self.unixckb.setText("UnixT2SoW")
-        self.unixckb.clicked.connect(self.setTimeConvert)
-
+        self.instruction.setTextFormat(QtCore.Qt.TextFormat.RichText)
+        self.instruction.setText("""
+        <p style="font-size:11pt">
+        <b>How to use:</b><br><br>
+        1. Select the target bag file<br><br>
+        2. Select the output directory for conversion results<br><br>
+        3. Select the topics you want to convert<br><br>
+        4. Choose time conversion option (if needed)<br><br>
+        5. Click "Convert" to begin processing
+        </p>
+        """)
+        
+        self.instructionsLayout.addWidget(self.instruction)
+        
+        # Add both sides to content layout
+        self.contentLayout.addWidget(self.topicsGroup, 3)
+        self.contentLayout.addWidget(self.instructionsGroup, 2)
+        
+        # Progress bar
+        self.progressGroup = QtWidgets.QGroupBox("Progress")
+        self.progressLayout = QtWidgets.QVBoxLayout(self.progressGroup)
+        
+        self.progressBar = QtWidgets.QProgressBar()
+        self.progressBar.setTextVisible(True)
+        self.progressBar.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.progressBar.setFormat("%p% - %v / %m")
+        self.progressBar.setValue(0)
+        
+        self.statusLabel = QtWidgets.QLabel("Ready")
+        self.statusLabel.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        
+        self.progressLayout.addWidget(self.progressBar)
+        self.progressLayout.addWidget(self.statusLabel)
+        
+        # Button box
+        self.buttonLayout = QtWidgets.QHBoxLayout()
+        self.buttonLayout.addStretch()
+        
+        self.convertButton = QtWidgets.QPushButton("Convert")
+        self.convertButton.setFixedSize(120, 35)
+        self.convertButton.clicked.connect(self._onAccepted)
+        
+        self.cancelButton = QtWidgets.QPushButton("Cancel")
+        self.cancelButton.setFixedSize(120, 35)
+        self.cancelButton.clicked.connect(QtCore.QCoreApplication.instance().quit)
+        
+        self.buttonLayout.addWidget(self.convertButton)
+        self.buttonLayout.addWidget(self.cancelButton)
+        
+        # Add all sections to main layout
+        self.mainLayout.addWidget(self.inputGroup)
+        self.mainLayout.addWidget(self.outputGroup)
+        self.mainLayout.addWidget(self.timeGroup)
+        self.mainLayout.addLayout(self.contentLayout)
+        self.mainLayout.addWidget(self.progressGroup)
+        self.mainLayout.addLayout(self.buttonLayout)
+        
+        # Set central widget
         MainWindow.setCentralWidget(self.centralwidget)
-        self.menubar = QtWidgets.QMenuBar(parent=MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 800, 25))
-        self.menubar.setObjectName("menubar")
-        MainWindow.setMenuBar(self.menubar)
+        
+        # Status bar
         self.statusbar = QtWidgets.QStatusBar(parent=MainWindow)
         self.statusbar.setObjectName("statusbar")
         MainWindow.setStatusBar(self.statusbar)
 
-        self.retranslateUi(MainWindow)
-        QtCore.QMetaObject.connectSlotsByName(MainWindow)
-
-    def retranslateUi(self, MainWindow):
-        _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
-        self.description_1.setText(_translate("MainWindow", "Selected Input Bag File"))
-        self.select_bag.setText(_translate("MainWindow", "Select bag file"))
-        self.description_2.setText(_translate("MainWindow", "Selected Output Directory(Folder)"))
-        self.select_output.setText(_translate("MainWindow", "Select out dir"))
-        self.description_3.setText(_translate("MainWindow", "Available Topics in selected bag file"))
-        self.instruction.setText(_translate("MainWindow", "<html><head/><body><p><span style=\" font-size:11pt;\">1. Selected the target bag file.<br/></span></p><p><span style=\" font-size:11pt;\">2. Selected the convert result output root dir<br/></span></p><p><span style=\" font-size:11pt;\">3. Selected the topics which wolud convert.<br/></span></p><p><span style=\" font-size:11pt;\">4. Press OK</span></p></body></html>"))
-        self.timedescrip.setText(_translate("MainWindow", "<html>Time<br>convert</html>"))
+    def _selectAllTopics(self):
+        for checkbox in self.checkBox:
+            checkbox.setChecked(True)
+        self._check_target_topic()
+        
+    def _deselectAllTopics(self):
+        for checkbox in self.checkBox:
+            checkbox.setChecked(False)
+        self._check_target_topic()
 
     def _showOpenDialog(self):
-        bag_path = QtWidgets.QFileDialog.getOpenFileName(None, 'select bag file', self.pwd, '*.bag')
+        bag_path = QtWidgets.QFileDialog.getOpenFileName(None, 'Select Bag File', self.pwd, 'ROS Bag Files (*.bag)')
         if bag_path[0]:
             self.selected_bag.setText(bag_path[0])
-            self.openbagpd = QtWidgets.QProgressDialog('Processing', 'Cancel', 0, 0, None)
+            self.statusLabel.setText("Opening bag file...")
+            self.progressBar.setRange(0, 0)  # Indeterminate progress
+            
+            # Use QApplication.processEvents to keep UI responsive
+            QtWidgets.QApplication.processEvents()
+            
+            # Open the bag file
             self.bag.open(bag_path[0])
-            self.openbagpd.close()
+            
+            # Update topic list
             self._set_avaliable_topics(self.bag.get_topics())
+            
+            # Reset progress bar
+            self.progressBar.setRange(0, 100)
+            self.progressBar.setValue(0)
+            self.statusLabel.setText("Bag file loaded successfully")
 
     def _showOutputDialog(self):
-        out_dir = QtWidgets.QFileDialog.getExistingDirectory(None, 'Select out dir', self.pwd, options=QtWidgets.QFileDialog.Option.ShowDirsOnly)
-        target_dir = 'bag_output'
-        out_dir = Path('/').joinpath(out_dir, target_dir)
-        self.selected_outdir.setText(out_dir.as_posix())
-        self.bag.set_outdir_path(out_dir)
-        self.outdir_ready = True
-            
+        out_dir = QtWidgets.QFileDialog.getExistingDirectory(None, 'Select Output Directory', self.pwd, options=QtWidgets.QFileDialog.Option.ShowDirsOnly)
+        if out_dir:
+            target_dir = 'bag_output'
+            out_dir = Path(out_dir) / target_dir
+            self.selected_outdir.setText(out_dir.as_posix())
+            self.bag.set_outdir_path(out_dir)
+            self.outdir_ready = True
+            self.statusLabel.setText("Output directory set")
 
     def _set_avaliable_topics(self, topics: list):
         self.target_topic = list()
-        for i in reversed(range(self.verticalLayout.count())): 
-            self.verticalLayout.itemAt(i).widget().setParent(None)
+        
+        # Clear existing checkboxes
+        for i in reversed(range(self.verticalLayout.count()-1)):  # -1 to keep the stretch
+            widget = self.verticalLayout.itemAt(i).widget()
+            if widget:
+                widget.setParent(None)
+        
+        # Create new checkboxes
         self.checkBox = list()
         for i, text in enumerate(topics):
-            self.checkBox.append(QtWidgets.QCheckBox(parent=self.verticalLayoutWidget))
-            self.checkBox[i].setObjectName(text)
-            self.checkBox[i].setText(text)
-            self.checkBox[i].clicked.connect(self._set_processed_topic_list)
-            self.verticalLayout.addWidget(self.checkBox[i])
+            checkbox = QtWidgets.QCheckBox(text)
+            checkbox.setObjectName(text)
+            checkbox.clicked.connect(lambda state, text=text: self._set_processed_topic_list(state, text))
+            self.checkBox.append(checkbox)
+            self.verticalLayout.insertWidget(i, checkbox)
 
-    def _set_processed_topic_list(self):
-        checkbox = self.verticalLayoutWidget.sender()
-        if checkbox.isChecked():
-            if checkbox.text() not in self.target_topic:
-                self.target_topic.append(checkbox.text())
+    def _set_processed_topic_list(self, state, topic_text):
+        if state:
+            if topic_text not in self.target_topic:
+                self.target_topic.append(topic_text)
         else:
-            if checkbox.text() in self.target_topic:
-                self.target_topic.remove(checkbox.text())
+            if topic_text in self.target_topic:
+                self.target_topic.remove(topic_text)
 
-    def setTimeConvert(self):
-        if self.gnssckb.isChecked() and not self.unixckb.isChecked():
+    def _handleGnssCheckbox(self):
+        if self.gnssckb.isChecked():
+            self.unixckb.setChecked(False)
             self.bag.timeconvert = 1
-        elif not self.gnssckb.isChecked() and self.unixckb.isChecked():
-            self.bag.timeconvert = 2
-        elif self.gnssckb.isChecked() and self.unixckb.isChecked():
-            return False
         else:
             self.bag.timeconvert = 0
-        return True
+    
+    def _handleUnixCheckbox(self):
+        if self.unixckb.isChecked():
+            self.gnssckb.setChecked(False)
+            self.bag.timeconvert = 2
+        else:
+            self.bag.timeconvert = 0
+
+    def setTimeConvert(self):
+        # This method is kept for backward compatibility
+        if self.gnssckb.isChecked():
+            self.bag.timeconvert = 1
+            return True
+        elif self.unixckb.isChecked():
+            self.bag.timeconvert = 2
+            return True
+        else:
+            self.bag.timeconvert = 0
+            return True
 
     def _onAccepted(self):
+        # Update target topics based on checkbox state
         self._check_target_topic()
-        print(self.target_topic)
+        
+        # Validate output directory
         if not self._check_output():
             return None
-        if not self.setTimeConvert():
-            QtWidgets.QMessageBox.warning(None, "multi timeconvet", "Please select the correct time base(Should be only one)")
+            
+        # Check if any topics are selected
+        if not self.target_topic:
+            QtWidgets.QMessageBox.warning(None, "No Topics Selected", "Please select at least one topic to convert")
             return None
-        self.progressdialog = QtWidgets.QProgressDialog('Processing', 'Cancel', 0, self.bag.t_end - self.bag.t_start, None)
-        self.progressdialog.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
+            
+        # Configure progress dialog
+        self.statusLabel.setText("Processing...")
+        self.progressBar.setValue(0)
+        duration = self.bag.t_end - self.bag.t_start
+        self.progressBar.setRange(0, int(duration))
+        
+        # Disable UI elements during processing
+        self._setUIEnabled(False)
+        
+        # Process messages
         self._processed_msgs()
-        # self.progressdialog.close()
-        # QtWidgets.QMessageBox.information(None, 'Processed', 'processing')
-        print("finsish")
 
-    def _onCanceled(self):
-        QtWidgets.QMessageBox.information(None, 'Canceled', 'Canceled')
-
+    def _setUIEnabled(self, enabled):
+        """Enable or disable UI elements during processing"""
+        self.convertButton.setEnabled(enabled)
+        self.select_bag.setEnabled(enabled)
+        self.select_output.setEnabled(enabled)
+        self.gnssckb.setEnabled(enabled)
+        self.unixckb.setEnabled(enabled)
+        self.selectAllButton.setEnabled(enabled)
+        self.deselectAllButton.setEnabled(enabled)
+        
+        # Enable/disable all topic checkboxes
+        for checkbox in self.checkBox:
+            checkbox.setEnabled(enabled)
     
     def _check_output(self):
         if not self.outdir_ready:
-            QtWidgets.QMessageBox.warning(None, "No out dir", "Please select the output directory")
+            QtWidgets.QMessageBox.warning(None, "No Output Directory", "Please select the output directory")
             return False
         self.bag.check_output(self.target_topic)
         return True
 
     def _check_target_topic(self):
+        self.target_topic.clear()
         for checkbox in self.checkBox:
-            if not checkbox.isChecked() and checkbox.text() in self.target_topic:
-                self.target_topic.remove(checkbox.text())
-            elif checkbox.isChecked() and checkbox.text() not in self.target_topic:
+            if checkbox.isChecked():
                 self.target_topic.append(checkbox.text())
 
-
     def _processed_msgs(self):
-        for topic, msg, t in self.bag.get_msgs(self.target_topic):
-            if self.progressdialog.wasCanceled():
-                QtWidgets.QMessageBox.information(None, 'Canceled', 'Processing has been canceled.')
-                break  # Exit the loop if the user clicks "Cancel"
-            if topic in self.target_topic:
-                data = self.converter.convert(msg)
-                self.bag.data_output(data)
-            self.progressdialog.setValue(t.to_sec() -self.bag.t_start)
-
-        self.bag.close_file()
+        cancel_requested = False
+        total_msgs = 0
+        processed_msgs = 0
+        update_frequency = 50  # Only update UI every 50 messages
+        
+        try:
+            # First pass to count total messages - with optimized UI updates
+            msg_iterator = self.bag.get_msgs(self.target_topic)
+            msgs_to_process = []
+            
+            # Store messages to process with less frequent UI updates
+            self.statusLabel.setText("Counting messages...")
+            for msg_data in msg_iterator:
+                total_msgs += 1
+                msgs_to_process.append(msg_data)
+                # Update UI less frequently
+                if total_msgs % 500 == 0:
+                    self.statusLabel.setText(f"Counting: {total_msgs}")
+                    QtWidgets.QApplication.processEvents()
+            
+            # Set status once after counting
+            self.statusLabel.setText(f"Processing {total_msgs} messages...")
+            
+            # Process stored messages
+            if total_msgs > 0:
+                self.progressBar.setRange(0, 100)  # Use percentage instead of message count
+                last_percent = -1  # Track last displayed percentage
+                
+                for topic, msg, t in msgs_to_process:
+                    processed_msgs += 1
+                    
+                    # Process message if it's in the target topics
+                    if topic in self.target_topic:
+                        data = self.converter.convert(msg)
+                        self.bag.data_output(data)
+                    
+                    # Update progress bar only when percentage changes
+                    current_percent = int((processed_msgs / total_msgs) * 100)
+                    if current_percent != last_percent:
+                        self.progressBar.setValue(current_percent)
+                        last_percent = current_percent
+                    
+                    # Process events and update status less frequently
+                    if processed_msgs % update_frequency == 0:
+                        # Simple progress indicator
+                        self.statusLabel.setText(f"Converting: {current_percent}%")
+                        QtWidgets.QApplication.processEvents()
+                        if cancel_requested:
+                            break
+                
+                # Processing completed
+                if not cancel_requested:
+                    self.progressBar.setValue(100)
+                    self.statusLabel.setText("Processing completed successfully!")
+                    QtWidgets.QMessageBox.information(None, "Success", f"Successfully processed {processed_msgs} messages")
+            else:
+                self.statusLabel.setText("No messages to process")
+                QtWidgets.QMessageBox.information(None, "No Data", "No messages found to process")
+        
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(None, "Error", f"An error occurred during processing: {str(e)}")
+            self.statusLabel.setText("Error during processing")
+        
+        finally:
+            # Close files and re-enable UI
+            self.bag.close_file()
+            self._setUIEnabled(True)
 
 if __name__ == "__main__":
     import sys
